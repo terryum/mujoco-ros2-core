@@ -47,6 +47,11 @@ def test_backend_moves_resets_and_reports_limits(model_path: Path) -> None:
     backend.reset()
     np.testing.assert_allclose(backend.read_state().positions, initial)
 
+    backend.reset({"joint_a": 0.25})
+    control_state = backend.read_control_state()
+    assert control_state.joint_names == ("joint_a",)
+    np.testing.assert_allclose(control_state.positions, [0.25])
+
 
 def test_backend_rejects_invalid_targets(model_path: Path) -> None:
     backend = MujocoJointBackend(model_path, ["joint_a"])

@@ -25,7 +25,7 @@ class RobotBackend(Protocol):
 
     def step(self) -> None: ...
 
-    def reset(self) -> None: ...
+    def reset(self, initial_positions: Mapping[str, float] | None = None) -> None: ...
 
 
 @dataclass(frozen=True)
@@ -138,6 +138,15 @@ class MujocoJointBackend:
             velocities=self.data.qvel[self._state_dof].copy(),
         )
 
+    def read_control_state(self) -> JointStateSnapshot:
+        """Return only controlled joints in configured action order."""
+
+        return JointStateSnapshot(
+            joint_names=self.controlled_joints,
+            positions=self.data.qpos[self._control_qpos].copy(),
+            velocities=self.data.qvel[self._control_dof].copy(),
+        )
+
     def set_joint_targets(self, targets: Mapping[str, float]) -> None:
         unknown = sorted(set(targets) - set(self.controlled_joints))
         if unknown:
@@ -172,10 +181,21 @@ class MujocoJointBackend:
             )
             mujoco.mj_step(self.model, self.data)
 
-    def reset(self) -> None:
+    def reset(self, initial_positions: Mapping[str, float] | None = None) -> None:
         mujoco.mj_resetData(self.model, self.data)
         self.data.qpos[self._hold_qpos] = self._hold_positions
         self.data.qpos[self._control_qpos] = self.center
         self.target[:] = self.center
+        if initial_positions:
+            unknown = sorted(set(initial_positions) - set(self.controlled_joints))
+            if unknown:
+                raise ValueError(f"unsupported initial joints: {', '.join(unknown)}")
+            for name, value in initial_positions.items():
+                numeric = float(value)
+                if not np.isfinite(numeric):
+                    raise ValueError(f"initial position for {name} must be finite")
+                index = self.controlled_joints.index(name)
+                clipped = np.clip(numeric, self.lower[index], self.upper[index])
+                self.data.qpos[self._control_qpos[index]] = clipped
+                self.target[index] = clipped
         mujoco.mj_forward(self.model, self.data)
-
