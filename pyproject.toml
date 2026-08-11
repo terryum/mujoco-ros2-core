@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mujoco-ros2-core"
+version = "0.1.0"
+description = "Reusable MuJoCo motion backends, validation, and ROS 2 bridging"
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+license = "Apache-2.0"
+authors = [{ name = "Terry Um" }]
+dependencies = [
+    "mujoco>=3.3,<4",
+    "numpy>=2,<3",
+]
+
+[project.scripts]
+mujoco-prepare-urdf = "mujoco_ros2_core.model:main"
+mujoco-ros2-bridge = "mujoco_ros2_core.ros_bridge:main"
+
+[dependency-groups]
+dev = [
+    "pytest>=8,<10",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
