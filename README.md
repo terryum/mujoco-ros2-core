@@ -8,6 +8,7 @@ datasets in their owning repositories.
 
 - Prepare MuJoCo-compatible URDF files without modifying vendor sources.
 - Run a configurable joint-position backend for scalar MuJoCo joints.
+- Drive MJCF-authored native position actuators without replacing their gains.
 - Represent and validate timed joint trajectories.
 - Publish simulated state and accept joint targets through a generic ROS 2 node.
 
@@ -32,4 +33,3 @@ configuration, safety limits, and hardware adapters in the robot repository.
 
 Apache-2.0. Third-party robot assets remain under their original licenses and
 are not redistributed here.
-
