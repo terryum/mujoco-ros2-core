@@ -204,10 +204,12 @@ class MujocoJointBackend:
 class MujocoPositionActuatorBackend:
     """Drive scalar joints through native MuJoCo position actuators.
 
-    The model must expose exactly one finite-range ``<position>`` actuator for
-    every controlled joint.  Unlike :class:`MujocoJointBackend`, this backend
-    preserves the gains, force limits, damping, contacts, and other dynamics
-    authored in the source MJCF.
+    The model must expose exactly one ``<position>`` actuator for every
+    controlled joint. Commands use the intersection of the finite joint and
+    actuator control ranges. If an actuator omits ``ctrlrange``, the finite
+    joint range is used as the command boundary. Unlike
+    :class:`MujocoJointBackend`, this backend preserves the gains, force limits,
+    damping, contacts, and other dynamics authored in the source MJCF.
     """
 
     def __init__(
@@ -290,11 +292,13 @@ class MujocoPositionActuatorBackend:
         self._actuator_ids = np.asarray(actuator_ids, dtype=np.int32)
         if not np.all(self.model.jnt_limited[joint_ids].astype(bool)):
             raise ValueError("controlled joints must define finite ranges")
-        if not np.all(self.model.actuator_ctrllimited[self._actuator_ids].astype(bool)):
-            raise ValueError("controlled position actuators must define finite ctrlrange")
 
         joint_ranges = self.model.jnt_range[joint_ids]
-        ctrl_ranges = self.model.actuator_ctrlrange[self._actuator_ids]
+        ctrl_limited = self.model.actuator_ctrllimited[self._actuator_ids].astype(bool)
+        ctrl_ranges = joint_ranges.copy()
+        ctrl_ranges[ctrl_limited] = self.model.actuator_ctrlrange[
+            self._actuator_ids[ctrl_limited]
+        ]
         self.lower = np.maximum(joint_ranges[:, 0], ctrl_ranges[:, 0])
         self.upper = np.minimum(joint_ranges[:, 1], ctrl_ranges[:, 1])
         if np.any(self.lower >= self.upper):

@@ -71,3 +71,18 @@ def test_native_position_validation(tmp_path: Path) -> None:
     )
     with pytest.raises(ValueError, match="exactly one native position actuator"):
         MujocoPositionActuatorBackend(write_model(tmp_path, motor_xml), ["joint_a"])
+
+
+def test_native_position_uses_joint_range_without_ctrlrange(tmp_path: Path) -> None:
+    no_ctrlrange_xml = MODEL_XML.replace(' ctrlrange="-.8 .8"', "")
+    backend = MujocoPositionActuatorBackend(
+        write_model(tmp_path, no_ctrlrange_xml),
+        ["joint_a"],
+    )
+
+    assert backend.position_limits["joint_a"] == pytest.approx((-1.0, 1.0))
+    backend.set_joint_targets({"joint_a": 2.0})
+    np.testing.assert_allclose(backend.target, (1.0,))
+    for _ in range(200):
+        backend.step()
+    assert np.all(np.isfinite(backend.read_state().positions))
